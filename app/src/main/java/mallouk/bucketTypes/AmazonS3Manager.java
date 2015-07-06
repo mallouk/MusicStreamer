@@ -154,5 +154,6 @@ public class AmazonS3Manager implements Serializable {
      */
     public URL getFileURL(String bucketName, String fileName){
         return amazonS3Client.getUrl(bucketName, fileName);
+        //test
     }
 }
