@@ -11,13 +11,16 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import mallouk.musicstreamer.BucketManager;
 import mallouk.musicstreamer.R;
 
@@ -30,8 +33,12 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     private ListView playMusicView = null;
     private BucketManager bucketManager = null;
-    private Button playPauseButton = null;
-    private Button repeatButton = null;
+    private String playPause = "Play";
+    private ImageButton repeatButton = null;
+    private ImageButton playPauseButton = null;
+    private ImageButton backButton = null;
+    private ImageButton forwardButton = null;
+
     private SeekBar seekBarProgress;
     private MediaPlayer player;
     private int numItemsInBucket = 0;
@@ -40,6 +47,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     final int[] currPos = new int[1];
     final AdapterView<?>[] view = new AdapterView<?>[1];
+    int repeatSwiticher = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +56,31 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         playMusicView = (ListView)findViewById(R.id.musicView);
         String bucketName = (String)getIntent().getSerializableExtra("BucketName");
         bucketManager = new BucketManager(bucketName);
-        playPauseButton = (Button)findViewById(R.id.playPauseButton);
-        repeatButton = (Button)findViewById(R.id.repeatButton);
+        playPauseButton = (ImageButton)findViewById(R.id.playImageButton);
+        playPauseButton.setImageResource(R.drawable.play_icon);
+
+        repeatButton = (ImageButton)findViewById(R.id.repeatButton);
+        repeatButton.setImageResource(R.drawable.offrepeat_icon);
+        backButton = (ImageButton)findViewById(R.id.backButton);
+        backButton.setImageResource(R.drawable.back_icon);
+        forwardButton = (ImageButton)findViewById(R.id.forwardButton);
+        forwardButton.setImageResource(R.drawable.forward_icon);
+
+        repeatButton.setOnClickListener(new Button.OnClickListener(){
+
+            @Override
+            public void onClick(View v) {
+                if (repeatSwiticher == 1){
+                    repeatButton.setImageResource(R.drawable.onrepeat_icon);
+                    repeatSwiticher = 2;
+                }else if (repeatSwiticher == 2){
+                    repeatButton.setImageResource(R.drawable.offrepeat_icon);
+                    repeatSwiticher = 1;
+                }else{
+                    repeatButton.setImageResource(R.drawable.offrepeat_icon);
+                }
+            }
+        });
 
         new SpillBucketTask(bucketName).execute();
         playMusicView.setOnItemClickListener(this);
@@ -67,7 +98,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     /** Method which updates the SeekBar primary progress by current song playing position*/
     private void primarySeekBarProgressUpdater() {
         seekBarProgress.setProgress((int)(((float)player.getCurrentPosition()/mediaFileLengthInMilliseconds)*100)); // This math construction give a percentage of "was playing"/"song length"
-        if (playPauseButton.getText().toString().equals("Pause")) {
+        if (playPause.equals("Pause")) {
             Runnable notification = new Runnable() {
                 public void run() {
                     primarySeekBarProgressUpdater();
@@ -85,7 +116,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
         player.setDataSource(url);
-        playPauseButton.setText("Pause");
+        playPause = "Pause";
+        playPauseButton.setImageResource(R.drawable.pause_icon);
         player.setOnCompletionListener(this);
         Runnable r = new Runnable() {
             public void run(){
@@ -119,20 +151,26 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     public void onCompletion(MediaPlayer mp) {
         Toast.makeText(getApplicationContext(), "Hello!", Toast.LENGTH_LONG).show();
         player.release();
-        if (currPos[0] == (numItemsInBucket - 1)) {
-            currPos[0] = 0;
+        if (repeatSwiticher == 2){
+            if (currPos[0] == (numItemsInBucket - 1)) {
+                currPos[0] = 0;
+            } else {
+                currPos[0]++;
+            }
+            player = new MediaPlayer();
+            player.setOnBufferingUpdateListener(this);
+            try {
+                processMusic();
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            playMusicView.setItemChecked(currPos[0], true);
         }else{
-            currPos[0]++;
+            playPauseButton.setImageResource(R.drawable.play_icon);
+            playMusicView.clearChoices();
+            playPause = "Play";
         }
 
-        player = new MediaPlayer();
-        player.setOnBufferingUpdateListener(this);
-        try {
-            processMusic();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        playMusicView.setItemChecked(currPos[0], true);
     }
 
     @Override
@@ -153,7 +191,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         Toast.makeText(getApplicationContext(), numItemsInBucket + "", Toast.LENGTH_LONG).show();
         player.stop();
         player = new MediaPlayer();
-        playPauseButton.setText("Play");
+        playPause = "Play";
+        playPauseButton.setImageResource(R.drawable.play_icon);
 
         currPos[0] = position;
         view[0] = parentView;
@@ -169,14 +208,17 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     @Override
     public void onClick(View v) {
         try {
-            if (playPauseButton.getText().toString().equals("Play")){
+            if (playPause.equals("Play")){
                processMusic();
-            }else if (playPauseButton.getText().toString().equals("UnPause")){
-                playPauseButton.setText("Pause");
+            }else if (playPause.equals("UnPause")){
+                playPause = "Pause";
+                playPauseButton.setImageResource(R.drawable.pause_icon);
+
                 player.start();
             }
-            else if (playPauseButton.getText().toString().equals("Pause")){
-                playPauseButton.setText("UnPause");
+            else if (playPause.equals("Pause")){
+                playPause = "UnPause";
+                playPauseButton.setImageResource(R.drawable.play_icon);
                 player.pause();
             }
 
