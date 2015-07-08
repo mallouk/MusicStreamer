@@ -167,7 +167,12 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             playMusicView.setItemChecked(currPos[0], true);
         }else{
             playPauseButton.setImageResource(R.drawable.play_icon);
+            player = new MediaPlayer();
+            player.setOnBufferingUpdateListener(this);
+
+
             playMusicView.clearChoices();
+            playMusicView.requestLayout();
             playPause = "Play";
         }
 
