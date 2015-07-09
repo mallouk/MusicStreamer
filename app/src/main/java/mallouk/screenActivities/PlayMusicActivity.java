@@ -65,22 +65,26 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         backButton.setImageResource(R.drawable.back_icon);
         forwardButton = (ImageButton)findViewById(R.id.forwardButton);
         forwardButton.setImageResource(R.drawable.forward_icon);
+        currPos[0] = -1;
 
-        repeatButton.setOnClickListener(new Button.OnClickListener(){
-
+        repeatButton.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (repeatSwiticher == 1){
+                if (repeatSwiticher == 1) {
                     repeatButton.setImageResource(R.drawable.onrepeat_icon);
                     repeatSwiticher = 2;
-                }else if (repeatSwiticher == 2){
+                } else if (repeatSwiticher == 2) {
                     repeatButton.setImageResource(R.drawable.offrepeat_icon);
                     repeatSwiticher = 1;
-                }else{
+                } else {
                     repeatButton.setImageResource(R.drawable.offrepeat_icon);
                 }
             }
         });
+
+        forwardButton.setOnClickListener(this);
+
+        backButton.setOnClickListener(this);
 
         new SpillBucketTask(bucketName).execute();
         playMusicView.setOnItemClickListener(this);
@@ -149,7 +153,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        Toast.makeText(getApplicationContext(), "Hello!", Toast.LENGTH_LONG).show();
+        //Toast.makeText(getApplicationContext(), "Hello!", Toast.LENGTH_LONG).show();
         player.release();
         if (repeatSwiticher == 2){
             if (currPos[0] == (numItemsInBucket - 1)) {
@@ -170,10 +174,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             player = new MediaPlayer();
             player.setOnBufferingUpdateListener(this);
 
-
             playMusicView.clearChoices();
             playMusicView.requestLayout();
             playPause = "Play";
+            currPos[0] = -1;
         }
 
     }
@@ -212,24 +216,65 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     @Override
     public void onClick(View v) {
-        try {
-            if (playPause.equals("Play")){
-               processMusic();
-            }else if (playPause.equals("UnPause")){
-                playPause = "Pause";
-                playPauseButton.setImageResource(R.drawable.pause_icon);
+        if(v.getId() == R.id.playImageButton) {
+            try {
+                if (playPause.equals("Play")) {
+                    processMusic();
+                } else if (playPause.equals("UnPause")) {
+                    playPause = "Pause";
+                    playPauseButton.setImageResource(R.drawable.pause_icon);
 
-                player.start();
-            }
-            else if (playPause.equals("Pause")){
-                playPause = "UnPause";
-                playPauseButton.setImageResource(R.drawable.play_icon);
-                player.pause();
-            }
+                    player.start();
+                } else if (playPause.equals("Pause")) {
+                    playPause = "UnPause";
+                    playPauseButton.setImageResource(R.drawable.play_icon);
+                    player.pause();
+                }
 
-            primarySeekBarProgressUpdater();
-        } catch (Exception e) {
-            // TODO: handle exception
+                primarySeekBarProgressUpdater();
+            } catch (Exception e) {
+                // TODO: handle exception
+            }
+        }else if(v.getId() == R.id.forwardButton){
+            if (currPos[0] == -1){
+                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
+            }else{
+                player.release();
+
+                if (currPos[0] == (numItemsInBucket - 1)) {
+                    currPos[0] = 0;
+                } else {
+                    currPos[0]++;
+                }
+                player = new MediaPlayer();
+                player.setOnBufferingUpdateListener(this);
+                try {
+                    processMusic();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                playMusicView.setItemChecked(currPos[0], true);
+            }
+        }else if(v.getId() == R.id.backButton){
+            if (currPos[0] == -1){
+                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
+            }else{
+                player.release();
+
+                if (currPos[0] == 0) {
+                    currPos[0] = (numItemsInBucket - 1);
+                } else {
+                    currPos[0]--;
+                }
+                player = new MediaPlayer();
+                player.setOnBufferingUpdateListener(this);
+                try {
+                    processMusic();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                playMusicView.setItemChecked(currPos[0], true);
+            }
         }
     }
 
