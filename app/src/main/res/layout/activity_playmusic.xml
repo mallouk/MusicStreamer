@@ -11,7 +11,7 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:drawSelectorOnTop="false"
-        android:layout_below="@+id/seekBar">
+        android:layout_below="@+id/currDirectory">
     </ListView>
 
     <SeekBar
@@ -28,10 +28,27 @@
     <ImageButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:id="@+id/backButton"
+        android:src="@drawable/back_icon"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="50dp" />
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:id="@+id/playImageButton"
         android:src="@drawable/play_icon"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_marginLeft="120dp" />
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/forwardButton"
+        android:src="@drawable/forward_icon"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/playImageButton"
+        android:layout_toEndOf="@+id/playImageButton" />
 
     <ImageButton
         android:layout_width="wrap_content"
@@ -42,22 +59,17 @@
         android:layout_toRightOf="@+id/forwardButton"
         android:layout_toEndOf="@+id/forwardButton" />
 
-    <ImageButton
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/backButton"
-        android:src="@drawable/back_icon"
-        android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/playImageButton"
-        android:layout_toStartOf="@+id/playImageButton" />
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="  /"
+        android:id="@+id/currDirectory"
+        android:layout_below="@+id/seekBar"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
 
-    <ImageButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/forwardButton"
-        android:src="@drawable/forward_icon"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@+id/playImageButton"
-        android:layout_toEndOf="@+id/playImageButton" />
 
 </RelativeLayout>

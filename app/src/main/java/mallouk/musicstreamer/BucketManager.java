@@ -101,6 +101,11 @@ public class BucketManager implements Serializable {
         return this.amazonS3Manager.listObjectsInBucket(bucketName);
     }
 
+    public ArrayList<String> listObjectsInBucketWithDelim(String bucketName, String delim){
+        String encryptionPolicy = bucketName.substring(0, 3);
+        return this.amazonS3Manager.listObjectsInBucketWithDelim(bucketName, delim);
+    }
+
     /** Method that lists the names of the buckets that are tied to the specific AWS
      *  account associated with the keys hardcoded above. We do this by calling methods
      *  from the AmazonS3Manager class.
@@ -139,4 +144,5 @@ public class BucketManager implements Serializable {
     public URL getFileURL(String file){
         return amazonS3Manager.getFileURL(bucketName, file);
     }
+
 }

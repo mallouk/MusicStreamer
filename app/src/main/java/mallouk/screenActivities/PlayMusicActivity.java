@@ -15,6 +15,7 @@ import android.widget.ImageButton;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     private ImageButton playPauseButton = null;
     private ImageButton backButton = null;
     private ImageButton forwardButton = null;
+    private TextView currentDirectoryView = null;
 
     private SeekBar seekBarProgress;
     private MediaPlayer player;
@@ -67,6 +69,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         backButton.setImageResource(R.drawable.back_icon);
         forwardButton = (ImageButton)findViewById(R.id.forwardButton);
         forwardButton.setImageResource(R.drawable.forward_icon);
+
+        currentDirectoryView = (TextView)findViewById(R.id.currDirectory);
         currPos[0] = -1;
 
         repeatButton.setOnClickListener(new Button.OnClickListener() {
@@ -87,7 +91,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         forwardButton.setOnClickListener(this);
         backButton.setOnClickListener(this);
 
-        new SpillBucketTask(bucketName).execute();
+        new SpillBucketTask(bucketName, "").execute();
         playMusicView.setOnItemClickListener(this);
         playPauseButton.setOnClickListener(this);
 
@@ -118,7 +122,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
         String url = bucketManager.getFileURL(fileName) + "";
         //Toast.makeText(getApplicationContext(), url + "", Toast.LENGTH_LONG).show();
-        String[] t = url.split("/");
 
 
         if (url.endsWith("mp3")){
@@ -147,8 +150,12 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             primarySeekBarProgressUpdater();
         }else{
             playMusicView.setAdapter(null);
-            Toast.makeText(getApplicationContext(), "Clear!", Toast.LENGTH_LONG).show();
-           new SpillBucketTask(globalBucketName, t[t.length - 1]).execute();
+            String[] directories = url.split(globalBucketName + ".s3.amazonaws.com");
+            String curDirectory = directories[1];
+            currentDirectoryView.setText("  " + curDirectory);
+            String delim = curDirectory.substring(1, curDirectory.length());
+            Toast.makeText(getApplicationContext(), globalBucketName + " " + delim, Toast.LENGTH_LONG).show();
+           new SpillBucketTask(globalBucketName, delim).execute();
         }
     }
 

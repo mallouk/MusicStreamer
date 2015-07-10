@@ -6,6 +6,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -104,18 +105,33 @@ public class AmazonS3Manager implements Serializable {
      */
     public ArrayList<String> listObjectsInBucket(String bucketName){
         ArrayList<String> fileNamesList = new ArrayList<String>();
-        for(S3ObjectSummary file : amazonS3Client.listObjects(bucketName).getObjectSummaries()) {
+        ListObjectsRequest listObjectsRequest = new ListObjectsRequest().withBucketName(bucketName);
+        for(S3ObjectSummary file : amazonS3Client.listObjects(listObjectsRequest).getObjectSummaries()) {
             fileNamesList.add(file.getKey());
         }
         return fileNamesList;
-
-        /*ArrayList<String> filesInBucket = new ArrayList<String>();
-        for (int i = 0; i < amazonS3Client.listObjects(bucketName).getObjectSummaries().size(); i++){
-            S3ObjectSummary fileObject = amazonS3Client.listObjects(bucketName).getObjectSummaries().get(i);
-            filesInBucket.add(fileObject.getKey());
-        }
-        return filesInBucket;*/
     }
+
+
+    /** Method that lists the objects in a particular bucket inside of a particular folder.
+     *
+     * @param bucketName        name of the bucket from where all the objects are contained
+     * @param delim             name of the folder from where the objects we'll search.
+     * @return                  returns the name of objects from the bucketName param.
+     */
+    public ArrayList<String> listObjectsInBucketWithDelim(String bucketName, String delim){
+        ArrayList<String> fileNamesList = new ArrayList<String>();
+
+        ListObjectsRequest listObjectsRequest = new ListObjectsRequest().withBucketName(bucketName).withPrefix(delim)
+                .withDelimiter(delim);
+        for(S3ObjectSummary file : amazonS3Client.listObjects(listObjectsRequest).getObjectSummaries()) {
+            fileNamesList.add(file.getKey());
+        }
+        return fileNamesList;
+    }
+
+
+
 
     /** Method that lists the buckets that are associated with the various AWS keys hardcoded above
      *
