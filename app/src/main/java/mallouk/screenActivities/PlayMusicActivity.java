@@ -71,6 +71,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         forwardButton.setImageResource(R.drawable.forward_icon);
 
         currentDirectoryView = (TextView)findViewById(R.id.currDirectory);
+        currentDirectoryView.setText("  /");
+
         currPos[0] = -1;
 
         repeatButton.setOnClickListener(new Button.OnClickListener() {
@@ -120,9 +122,21 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     public void processMusic() throws Exception{
         String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
-        String url = bucketManager.getFileURL(fileName) + "";
-        //Toast.makeText(getApplicationContext(), url + "", Toast.LENGTH_LONG).show();
 
+
+        String originFile = "";
+        if (fileName.contains("../")){
+            fileName = "";
+        }
+        if (currentDirectoryView.getText().toString().trim().equals("/")){
+            originFile = fileName + "";
+        }else{
+            String dir = currentDirectoryView.getText().toString().trim().toString().substring(1,
+                    currentDirectoryView.getText().toString().trim().toString().length());
+            originFile = dir + fileName + "";
+        }
+
+        String url = bucketManager.getFileURL(originFile) + "";
 
         if (url.endsWith("mp3")){
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -152,9 +166,9 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             playMusicView.setAdapter(null);
             String[] directories = url.split(globalBucketName + ".s3.amazonaws.com");
             String curDirectory = directories[1];
-            currentDirectoryView.setText("  " + curDirectory);
+            currentDirectoryView.setText("  /" + originFile);
             String delim = curDirectory.substring(1, curDirectory.length());
-            Toast.makeText(getApplicationContext(), globalBucketName + " " + delim, Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), url + " " + delim, Toast.LENGTH_LONG).show();
            new SpillBucketTask(globalBucketName, delim).execute();
         }
     }
