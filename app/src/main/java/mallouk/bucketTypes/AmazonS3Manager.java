@@ -107,7 +107,10 @@ public class AmazonS3Manager implements Serializable {
         ArrayList<String> fileNamesList = new ArrayList<String>();
         ListObjectsRequest listObjectsRequest = new ListObjectsRequest().withBucketName(bucketName);
         for(S3ObjectSummary file : amazonS3Client.listObjects(listObjectsRequest).getObjectSummaries()) {
-            fileNamesList.add(file.getKey());
+            String name = file.getKey();
+            if (!(name.contains("/") && name.endsWith("mp3"))){
+                fileNamesList.add(name);
+            }
         }
         return fileNamesList;
     }
@@ -124,8 +127,16 @@ public class AmazonS3Manager implements Serializable {
 
         ListObjectsRequest listObjectsRequest = new ListObjectsRequest().withBucketName(bucketName).withPrefix(delim)
                 .withDelimiter(delim);
+
         for(S3ObjectSummary file : amazonS3Client.listObjects(listObjectsRequest).getObjectSummaries()) {
-            fileNamesList.add(file.getKey());
+            String name = file.getKey();
+            name = name.replace(delim, "");
+            if (!(name.contains("/") && name.endsWith("mp3"))){
+                if (name.equals("")){
+                    name = "../ (go up one level)";
+                }
+                fileNamesList.add(name);
+            }
         }
         return fileNamesList;
     }
