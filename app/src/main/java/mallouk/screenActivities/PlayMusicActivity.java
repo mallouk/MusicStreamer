@@ -126,16 +126,23 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
         String originFile = "";
         if (fileName.contains("../")){
-            fileName = "";
+            String[] parse = currentDirectoryView.getText().toString().trim().split("/");
+            String newDir = "";
+            for (int i = 0; i < parse.length-1; i++){
+                newDir+=parse[i] + "/";
+            }
+            //Toast.makeText(getApplicationContext(), parse.length + " " + newDir + "--" + parse[1], Toast.LENGTH_LONG).show();
+            fileName = newDir;
+            currentDirectoryView.setText("  " + newDir);
+        }else {
+            if (currentDirectoryView.getText().toString().trim().equals("/")) {
+                originFile = fileName + "";
+            } else {
+                String dir = currentDirectoryView.getText().toString().trim().toString().substring(1,
+                        currentDirectoryView.getText().toString().trim().toString().length());
+                originFile = dir + fileName + "";
+            }
         }
-        if (currentDirectoryView.getText().toString().trim().equals("/")){
-            originFile = fileName + "";
-        }else{
-            String dir = currentDirectoryView.getText().toString().trim().toString().substring(1,
-                    currentDirectoryView.getText().toString().trim().toString().length());
-            originFile = dir + fileName + "";
-        }
-
         String url = bucketManager.getFileURL(originFile) + "";
 
         if (url.endsWith("mp3")){
@@ -168,7 +175,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             String curDirectory = directories[1];
             currentDirectoryView.setText("  /" + originFile);
             String delim = curDirectory.substring(1, curDirectory.length());
-            Toast.makeText(getApplicationContext(), url + " " + delim, Toast.LENGTH_LONG).show();
+            //Toast.makeText(getApplicationContext(), url + " " + delim, Toast.LENGTH_LONG).show();
            new SpillBucketTask(globalBucketName, delim).execute();
         }
     }
@@ -364,8 +371,24 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
          * @param filesInBucket
          */
         public void onPostExecute(ArrayList<String> filesInBucket) {
+            ArrayList<String> formatedFilesInBucket = new ArrayList<String>();
+
+            Toast.makeText(getApplicationContext(), filesInBucket.get(0) + "", Toast.LENGTH_LONG);
+
+            for (int i = 0; i < filesInBucket.size(); i++){
+                if (!filesInBucket.get(i).toString().endsWith(".mp3")){
+                    formatedFilesInBucket.add(filesInBucket.get(i));
+                }
+            }
+
+            for (int i = 0; i < filesInBucket.size(); i++){
+                if (filesInBucket.get(i).toString().endsWith(".mp3")){
+                    formatedFilesInBucket.add(filesInBucket.get(i));
+                }
+            }
             ListAdapter list = new ArrayAdapter<String>(getApplicationContext(),
-                    android.R.layout.simple_list_item_multiple_choice, filesInBucket);
+                    android.R.layout.simple_list_item_multiple_choice, formatedFilesInBucket);
+
 
             playMusicView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
             playMusicView.setAdapter(list);

@@ -8,6 +8,7 @@ public class AmazonAccountKeys {
     //Defined instance variables
     private static String publicKey = "";
     private static String privateKey = "";
+
     private static String keyFile = "/.keys";
 
     /** Constructor that defines initial properties
