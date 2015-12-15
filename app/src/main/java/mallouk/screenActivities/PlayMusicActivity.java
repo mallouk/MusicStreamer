@@ -330,11 +330,21 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     }
 
 
+    /** CustomPlayView class that creates our custom view.
+     *
+     */
     class CustomPlayView extends ArrayAdapter<String> {
         public CustomPlayView(Context context, ArrayList<String> songNames){
             super(context, R.layout.custom_row, songNames);
         }
 
+        /** We overwrite the getView method to draw our custom list
+         *
+         * @param position          position of list we are creating
+         * @param customView        custom view object
+         * @param parent            parent object of view.
+         * @return                  return view created.
+         */
         public View getView(int position, View customView, ViewGroup parent) {
 
             if (customView == null) {
