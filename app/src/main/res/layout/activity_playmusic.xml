@@ -12,8 +12,8 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:drawSelectorOnTop="false"
-        android:layout_below="@+id/currDirectory"
-        android:background="#000000"
+        android:layout_below="@+id/songName"
+        android:background="#00000000"
         android:textColor="#FFFFFF">
     </ListView>
 
@@ -67,12 +67,13 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="  /"
-        android:id="@+id/currDirectory"
+        android:id="@+id/songName"
         android:layout_below="@+id/seekBar"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true"
+        android:textColor="#FFFFFF" />
 
 
 </RelativeLayout>
