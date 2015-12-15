@@ -1,33 +1,32 @@
 package mallouk.screenActivities;
 
 import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import mallouk.musicstreamer.BucketManager;
 import mallouk.musicstreamer.R;
 
-/**
- * Created by Matthew Jallouk on 7/3/2015.
- */
 public class PlayMusicActivity extends Activity implements View.OnTouchListener, MediaPlayer.OnCompletionListener,
         MediaPlayer.OnBufferingUpdateListener, AdapterView.OnItemClickListener,
         View.OnClickListener {
@@ -37,20 +36,19 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     private String playPause = "Play";
     private ImageButton repeatButton = null;
     private ImageButton playPauseButton = null;
-    private ImageButton backButton = null;
-    private ImageButton forwardButton = null;
-    private TextView currentDirectoryView = null;
 
+    private TextView currentDirectoryView = null;
     private SeekBar seekBarProgress;
     private MediaPlayer player;
     private int numItemsInBucket = 0;
     private int mediaFileLengthInMilliseconds;
     private final Handler handler = new Handler();
-
     final int[] currPos = new int[1];
     final AdapterView<?>[] view = new AdapterView<?>[1];
     int repeatSwiticher = 1;
     private String globalBucketName;
+    private int selectedIndex = -1;
+    private View previousViewItem = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,37 +63,24 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
         repeatButton = (ImageButton)findViewById(R.id.repeatButton);
         repeatButton.setImageResource(R.drawable.offrepeat_icon);
-        backButton = (ImageButton)findViewById(R.id.backButton);
+        ImageButton backButton = (ImageButton)findViewById(R.id.backButton);
         backButton.setImageResource(R.drawable.back_icon);
-        forwardButton = (ImageButton)findViewById(R.id.forwardButton);
+        ImageButton forwardButton = (ImageButton)findViewById(R.id.forwardButton);
         forwardButton.setImageResource(R.drawable.forward_icon);
 
-        currentDirectoryView = (TextView)findViewById(R.id.currDirectory);
+        currentDirectoryView = (TextView)findViewById(R.id.songName);
         currentDirectoryView.setText("  /");
 
         currPos[0] = -1;
 
-        repeatButton.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (repeatSwiticher == 1) {
-                    repeatButton.setImageResource(R.drawable.onrepeat_icon);
-                    repeatSwiticher = 2;
-                } else if (repeatSwiticher == 2) {
-                    repeatButton.setImageResource(R.drawable.offrepeat_icon);
-                    repeatSwiticher = 1;
-                } else {
-                    repeatButton.setImageResource(R.drawable.offrepeat_icon);
-                }
-            }
-        });
-
+        //Define listeners
+        repeatButton.setOnClickListener(this);
         forwardButton.setOnClickListener(this);
         backButton.setOnClickListener(this);
+        playPauseButton.setOnClickListener(this);
 
         new SpillBucketTask(bucketName, "").execute();
         playMusicView.setOnItemClickListener(this);
-        playPauseButton.setOnClickListener(this);
 
         seekBarProgress = (SeekBar)findViewById(R.id.seekBar);
         seekBarProgress.setMax(99); // It means 100% .0-99
@@ -105,24 +90,98 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         player.setOnBufferingUpdateListener(this);
     }
 
+    @Override
+    public void onClick(View v) {
+        if(v.getId() == R.id.playImageButton) {
+            try {
+                if (playPause.equals("Play")) {
+                    processMusic();
+                } else if (playPause.equals("UnPause")) {
+                    playPause = "Pause";
+                    playPauseButton.setImageResource(R.drawable.pause_icon);
+
+                    player.start();
+                } else if (playPause.equals("Pause")) {
+                    playPause = "UnPause";
+                    playPauseButton.setImageResource(R.drawable.play_icon);
+                    player.pause();
+                }
+
+                primarySeekBarProgressUpdater();
+            } catch (Exception e) {
+                //Do Nothing
+            }
+        }else if(v.getId() == R.id.forwardButton){
+            if (currPos[0] == -1){
+                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
+            }else{
+                player.release();
+
+                if (currPos[0] == (numItemsInBucket - 1)) {
+                    currPos[0] = 0;
+                } else {
+                    currPos[0]++;
+                }
+                player = new MediaPlayer();
+                player.setOnBufferingUpdateListener(this);
+                try {
+                    processMusic();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                playMusicView.setItemChecked(currPos[0], true);
+            }
+        }else if(v.getId() == R.id.backButton){
+            if (currPos[0] == -1){
+                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
+            }else{
+                player.release();
+
+                if (currPos[0] == 0) {
+                    currPos[0] = (numItemsInBucket - 1);
+                } else {
+                    currPos[0]--;
+                }
+                player = new MediaPlayer();
+                player.setOnBufferingUpdateListener(this);
+                try {
+                    processMusic();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                playMusicView.setItemChecked(currPos[0], true);
+            }
+        }else if (v.getId() == R.id.repeatButton){
+            if (repeatSwiticher == 1) {
+                repeatButton.setImageResource(R.drawable.onrepeat_icon);
+                repeatSwiticher = 2;
+            } else if (repeatSwiticher == 2) {
+                repeatButton.setImageResource(R.drawable.offrepeat_icon);
+                repeatSwiticher = 1;
+            } else {
+                repeatButton.setImageResource(R.drawable.offrepeat_icon);
+            }
+        }
+    }
 
     /** Method which updates the SeekBar primary progress by current song playing position*/
     private void primarySeekBarProgressUpdater() {
-        seekBarProgress.setProgress((int)(((float)player.getCurrentPosition()/mediaFileLengthInMilliseconds)*100)); // This math construction give a percentage of "was playing"/"song length"
+        seekBarProgress.setProgress((int)(((float)player.getCurrentPosition()/mediaFileLengthInMilliseconds)*100));
+        // This math construction give a percentage of "was playing"/"song length"
         if (playPause.equals("Pause")) {
             Runnable notification = new Runnable() {
                 public void run() {
                     primarySeekBarProgressUpdater();
                 }
             };
-            handler.postDelayed(notification,1000);
+            handler.postDelayed(notification, 1000);
         }
     }
 
 
     public void processMusic() throws Exception{
         String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
-
+        //Toast.makeText(getApplicationContext(), "Make Toast!", Toast.LENGTH_SHORT).show();
 
         String originFile = "";
         if (fileName.contains("../")){
@@ -131,15 +190,13 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             for (int i = 0; i < parse.length-1; i++){
                 newDir+=parse[i] + "/";
             }
-            //Toast.makeText(getApplicationContext(), parse.length + " " + newDir + "--" + parse[1], Toast.LENGTH_LONG).show();
-            fileName = newDir;
             currentDirectoryView.setText("  " + newDir);
         }else {
             if (currentDirectoryView.getText().toString().trim().equals("/")) {
                 originFile = fileName + "";
             } else {
-                String dir = currentDirectoryView.getText().toString().trim().toString().substring(1,
-                        currentDirectoryView.getText().toString().trim().toString().length());
+                String currDir = currentDirectoryView.getText().toString().trim();
+                String dir = currDir.substring(1, currDir.length());
                 originFile = dir + fileName + "";
             }
         }
@@ -156,7 +213,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                     try{
                         player.prepare();
                     }catch (Exception e) {
-                        // TODO: handle exception
+                        //Do Nothing
                     }
                 }
             };
@@ -164,7 +221,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             ExecutorService executeT1 = Executors.newFixedThreadPool(1);
             executeT1.execute(r);
             executeT1.shutdownNow();
-            while (!executeT1.isTerminated()){};
+            while (!executeT1.isTerminated()){}
             player.start();
 
             mediaFileLengthInMilliseconds = player.getDuration();
@@ -188,7 +245,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        //Toast.makeText(getApplicationContext(), "Hello!", Toast.LENGTH_LONG).show();
         player.release();
         if (repeatSwiticher == 2){
             if (currPos[0] == (numItemsInBucket - 1)) {
@@ -251,75 +307,66 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         currPos[0] = position;
         view[0] = parentView;
         try{
+            String fileName = String.valueOf(parentView.getItemAtPosition(position));
+
+
+            //parentView.setBackgroundColor(Color.GREEN);
+            if (fileName.endsWith("mp3")) {
+                selectedIndex = position;
+            }else{
+                selectedIndex = -1;
+            }
+
+            view1.setBackgroundColor(Color.GRAY);
+
             processMusic();
+            if (previousViewItem != null){
+                previousViewItem.setBackgroundColor(Color.BLACK);
+            }
+            previousViewItem = view1;
         }catch(Exception e){
             e.printStackTrace();
         }
     }
 
-    @Override
-    public void onClick(View v) {
-        if(v.getId() == R.id.playImageButton) {
-            try {
-                if (playPause.equals("Play")) {
-                    processMusic();
-                } else if (playPause.equals("UnPause")) {
-                    playPause = "Pause";
-                    playPauseButton.setImageResource(R.drawable.pause_icon);
 
-                    player.start();
-                } else if (playPause.equals("Pause")) {
-                    playPause = "UnPause";
-                    playPauseButton.setImageResource(R.drawable.play_icon);
-                    player.pause();
-                }
+    class CustomPlayView extends ArrayAdapter<String> {
+        public CustomPlayView(Context context, ArrayList<String> songNames){
+            super(context, R.layout.custom_row, songNames);
+        }
 
-                primarySeekBarProgressUpdater();
-            } catch (Exception e) {
-                // TODO: handle exception
+        public View getView(int position, View customView, ViewGroup parent) {
+
+            if (customView == null) {
+                LayoutInflater layoutInflator = LayoutInflater.from(getContext());
+                customView = layoutInflator.inflate(R.layout.custom_row, null, true);
             }
-        }else if(v.getId() == R.id.forwardButton){
-            if (currPos[0] == -1){
-                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
-            }else{
-                player.release();
 
-                if (currPos[0] == (numItemsInBucket - 1)) {
-                    currPos[0] = 0;
-                } else {
-                    currPos[0]++;
-                }
-                player = new MediaPlayer();
-                player.setOnBufferingUpdateListener(this);
-                try {
-                    processMusic();
-                }catch(Exception e){
-                    e.printStackTrace();
-                }
-                playMusicView.setItemChecked(currPos[0], true);
-            }
-        }else if(v.getId() == R.id.backButton){
-            if (currPos[0] == -1){
-                Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
-            }else{
-                player.release();
+            //Gets song name
+            String song = getItem(position);
+            TextView songName = (TextView) customView.findViewById(R.id.songName);
+            ImageView image = (ImageView) customView.findViewById(R.id.musicIcon);
 
-                if (currPos[0] == 0) {
-                    currPos[0] = (numItemsInBucket - 1);
-                } else {
-                    currPos[0]--;
-                }
-                player = new MediaPlayer();
-                player.setOnBufferingUpdateListener(this);
-                try {
-                    processMusic();
-                }catch(Exception e){
-                    e.printStackTrace();
-                }
-                playMusicView.setItemChecked(currPos[0], true);
+            songName.setText(song);
+            if (song.endsWith("mp3")) {
+                image.setImageResource(R.drawable.music);
+            } else {
+                image.setImageResource(R.drawable.folder);
             }
+
+            customView.setBackgroundColor(Color.BLACK);
+
+
+            if (selectedIndex != -1) {
+                if (selectedIndex == position && getItem(selectedIndex).endsWith("mp3")) {
+                    customView.setBackgroundColor(Color.GRAY);
+                }
+            }
+
+            return customView;
         }
     }
+
 
 
 
@@ -332,15 +379,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         private String bucketName;
         private String delim;
 
-        /** Constructor that takes the bucketName that we are taking the contents of to spill.
-         *
-         * @param bucketName                    name of the bucket to spill.
-         */
-        public SpillBucketTask(String bucketName){
-            this.bucketName = bucketName;
-            this.delim = "";
-        }
-
         public SpillBucketTask(String bucketName, String delim){
             this.bucketName = bucketName;
             this.delim = delim;
@@ -349,7 +387,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         /** Method that runs when this task is executed. It lists the takes the objects of the
          *  bucket and lists the file names to have them placed in an Array.
          *
-         * @param voids
+         * @param voids                         something...
          * @return                              return the list of items to be placed on the
          *                                      screen.
          */
@@ -361,22 +399,27 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 }else{
                     filesInBucket = bucketManager.listObjectsInBucketWithDelim(bucketName, delim);
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                //Do nothing...
+            }
             return filesInBucket;
         }
 
         /** After the execution of the method above, we wll then update our adapter to list the
          *  files on the screen and add that adapter onto the ListView to then show.
          *
-         * @param filesInBucket
+         * @param filesInBucket                 files in bucket
          */
         public void onPostExecute(ArrayList<String> filesInBucket) {
             ArrayList<String> formatedFilesInBucket = new ArrayList<String>();
-
-            Toast.makeText(getApplicationContext(), filesInBucket.get(0) + "", Toast.LENGTH_LONG);
+            if (!currentDirectoryView.getText().equals("  /")){
+                formatedFilesInBucket.add("../ (go up one level)");
+            }
 
             for (int i = 0; i < filesInBucket.size(); i++){
-                if (!filesInBucket.get(i).toString().endsWith(".mp3")){
+                String[] tok = filesInBucket.get(i).toString().split("/");
+
+                if (!filesInBucket.get(i).toString().endsWith(".mp3") && tok.length == 1){
                     formatedFilesInBucket.add(filesInBucket.get(i));
                 }
             }
@@ -386,10 +429,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                     formatedFilesInBucket.add(filesInBucket.get(i));
                 }
             }
-            ListAdapter list = new ArrayAdapter<String>(getApplicationContext(),
-                    android.R.layout.simple_list_item_multiple_choice, formatedFilesInBucket);
 
-
+            ListAdapter list = new CustomPlayView(getApplicationContext(), formatedFilesInBucket);
             playMusicView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
             playMusicView.setAdapter(list);
             numItemsInBucket = filesInBucket.size();
