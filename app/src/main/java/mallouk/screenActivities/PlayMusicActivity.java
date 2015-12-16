@@ -48,7 +48,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     int repeatSwiticher = 1;
     private String globalBucketName;
     private int selectedIndex = -1;
-    private View previousViewItem = null;
+    private int prevViewIndex = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +70,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
         currentDirectoryView = (TextView)findViewById(R.id.songName);
         currentDirectoryView.setText("  /");
-
         currPos[0] = -1;
 
         //Define listeners
@@ -99,7 +98,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 } else if (playPause.equals("UnPause")) {
                     playPause = "Pause";
                     playPauseButton.setImageResource(R.drawable.pause_icon);
-
                     player.start();
                 } else if (playPause.equals("Pause")) {
                     playPause = "UnPause";
@@ -116,7 +114,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
             }else{
                 player.release();
-
                 if (currPos[0] == (numItemsInBucket - 1)) {
                     currPos[0] = 0;
                 } else {
@@ -125,6 +122,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 player = new MediaPlayer();
                 player.setOnBufferingUpdateListener(this);
                 try {
+                    getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
+                    getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
+                    selectedIndex=currPos[0];
+
                     processMusic();
                 }catch(Exception e){
                     e.printStackTrace();
@@ -142,6 +143,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 } else {
                     currPos[0]--;
                 }
+                getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
+                getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
+                selectedIndex=currPos[0];
+
                 player = new MediaPlayer();
                 player.setOnBufferingUpdateListener(this);
                 try {
@@ -237,7 +242,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         }
     }
 
-
     @Override
     public void onBufferingUpdate(MediaPlayer mp, int percent) {
         seekBarProgress.setSecondaryProgress(percent);
@@ -252,6 +256,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             } else {
                 currPos[0]++;
             }
+            getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
+            getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
+            selectedIndex=currPos[0];
+
             player = new MediaPlayer();
             player.setOnBufferingUpdateListener(this);
             try {
@@ -272,6 +280,9 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 currPos[0] = -1;
             } else {
                 currPos[0]++;
+                getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
+                getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
+                selectedIndex=currPos[0];
 
                 player = new MediaPlayer();
                 player.setOnBufferingUpdateListener(this);
@@ -283,6 +294,18 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 playMusicView.setItemChecked(currPos[0], true);
             }
 
+        }
+    }
+
+    public View getViewByPosition(int pos, ListView listView) {
+        final int firstListItemPosition = listView.getFirstVisiblePosition();
+        final int lastListItemPosition = firstListItemPosition + listView.getChildCount() - 1;
+
+        if (pos < firstListItemPosition || pos > lastListItemPosition ) {
+            return listView.getAdapter().getView(pos, null, listView);
+        } else {
+            final int childIndex = pos - firstListItemPosition;
+            return listView.getChildAt(childIndex);
         }
     }
 
@@ -304,26 +327,25 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         playPause = "Play";
         playPauseButton.setImageResource(R.drawable.play_icon);
 
+        //Needed for code to work.
         currPos[0] = position;
         view[0] = parentView;
         try{
             String fileName = String.valueOf(parentView.getItemAtPosition(position));
 
-
-            //parentView.setBackgroundColor(Color.GREEN);
             if (fileName.endsWith("mp3")) {
                 selectedIndex = position;
             }else{
                 selectedIndex = -1;
             }
 
+            if (prevViewIndex != -1){
+                getViewByPosition(prevViewIndex, playMusicView).setBackgroundColor(Color.BLACK);
+            }
+            prevViewIndex = position;
             view1.setBackgroundColor(Color.GRAY);
 
             processMusic();
-            if (previousViewItem != null){
-                previousViewItem.setBackgroundColor(Color.BLACK);
-            }
-            previousViewItem = view1;
         }catch(Exception e){
             e.printStackTrace();
         }
