@@ -1,6 +1,7 @@
 package mallouk.screenActivities;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -21,11 +22,14 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import mallouk.musicstreamer.BucketManager;
+import mallouk.musicstreamer.DownloadFile;
 import mallouk.musicstreamer.R;
 
 public class PlayMusicActivity extends Activity implements View.OnTouchListener, MediaPlayer.OnCompletionListener,
@@ -59,6 +63,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     private ArrayList<String> selectedDownloadedSong = new ArrayList<String>();
     private int downloadLevel = 1;
     private boolean[] itemToggle;
+    private ProgressDialog downloadProgress = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -187,7 +192,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         }else if(v.getId() == R.id.downloadButton) {
             mode.setText("Download Mode");
             if (downloadLevel == 1){
-                Toast.makeText(getApplicationContext(), "Download call goes here...", Toast.LENGTH_LONG).show();
                 ListAdapter list = new CustomPlayView(getApplicationContext(), formatedFilesInBucket);
                 playMusicView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
                 playMusicView.setAdapter(list);
@@ -195,9 +199,20 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 selectedDownloadedSong = new ArrayList<String>();
                 downloadLevel = 2;
             }else{
+                downloadProgress = new ProgressDialog(PlayMusicActivity.this);
                 Toast.makeText(getApplicationContext(), "Download starts...", Toast.LENGTH_SHORT).show();
-            }
+                ProgressDialog progressDialog = new ProgressDialog(PlayMusicActivity.this);
+                for (int i = 0; i < selectedDownloadedSong.size(); i++){
+                    String currentFolder = currentDirectoryView.getText().toString().trim();
+                    currentFolder = currentFolder.substring(0, currentFolder.length() - 1);
+                    Toast.makeText(getApplicationContext(), "" + bucketManager.getBucketName() + "" +
+                            currentFolder, Toast.LENGTH_LONG).show();
 
+                    DownloadFile downloadFile = new DownloadFile(i, selectedDownloadedSong, getApplicationContext(), progressDialog,
+                            bucketManager, currentFolder);
+                    downloadFile.execute();
+                }
+            }
         }
     }
 
@@ -382,9 +397,9 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                 e.printStackTrace();
             }
         }else{
-            Toast.makeText(getApplicationContext(), view1.getBackground().equals(R.drawable.unchecked) + "" , Toast.LENGTH_SHORT).show();
-            if (!fileName.endsWith("mp3")){
-
+            if (!fileName.endsWith("mp3") && !fileName.endsWith("jpg")){
+                Toast.makeText(getApplicationContext(), "Sorry, but you cannot change folders while in download mode. " +
+                        "To exit download mode, either download what you need or hit the back button." , Toast.LENGTH_SHORT).show();
             }else{
                 ImageView imageView = (ImageView)view1.findViewById(R.id.musicIcon);
                 if (itemToggle[position]){
@@ -393,7 +408,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                     view1.setBackgroundColor(Color.BLACK);
                     selectedDownloadedSong.remove(fileName);
                     itemToggle[position] = false;
-                }else{ //False, not selected
+                }else{
                     //We make it selected
                     imageView.setImageResource(R.drawable.checked);
                     view1.setBackgroundColor(Color.GRAY);
@@ -403,6 +418,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             }
         }
     }
+
+
 
 
     /** CustomPlayView class that creates our custom view.
@@ -457,13 +474,17 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
 
                 songName.setText(song);
                 if (song.endsWith("mp3")) {
-                    image.setImageResource(R.drawable.unchecked);
+                    if (itemToggle[position]) {
+                        customView.setBackgroundColor(Color.GRAY);
+                        image.setImageResource(R.drawable.checked);
+                    }else{
+                        customView.setBackgroundColor(Color.BLACK);
+                        image.setImageResource(R.drawable.unchecked);
+                    }
                 } else {
                     image.setImageResource(R.drawable.folder);
+                    customView.setBackgroundColor(Color.BLACK);
                 }
-
-                customView.setBackgroundColor(Color.BLACK);
-
 
                 if (selectedIndex != -1) {
                     if (selectedIndex == position && getItem(selectedIndex).endsWith("mp3")) {

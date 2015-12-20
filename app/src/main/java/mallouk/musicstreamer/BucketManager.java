@@ -20,7 +20,6 @@ public class BucketManager implements Serializable {
     //Instance variables to be used by the BucketManager class.
     private AmazonS3Manager amazonS3Manager;
     private String bucketName;
-    private String encryptionPolicy;
 
     /** Constructor that defines the initial properties of this class object.
      *
@@ -28,7 +27,6 @@ public class BucketManager implements Serializable {
      */
     public BucketManager(String bucketName){
         this.bucketName = bucketName;
-        this.encryptionPolicy = bucketName.substring(0,3);
         this.amazonS3Manager = new AmazonS3Manager();
     }
 
@@ -37,7 +35,6 @@ public class BucketManager implements Serializable {
      *
      */
     public void createBucket() {
-        String encryptionPolicy = bucketName.substring(0, 3);
         this.amazonS3Manager.createBucket(bucketName);
     }
 
@@ -46,7 +43,6 @@ public class BucketManager implements Serializable {
      *
      */
     public void destroyBucket() {
-        String encryptionPolicy = bucketName.substring(0, 3);
         this.amazonS3Manager.deleteBucket(bucketName);
     }
 
@@ -56,7 +52,6 @@ public class BucketManager implements Serializable {
      * @param file              name of the file that will be deleted from a specific bucket.
      */
     public void deleteObjectInBucket(String file){
-        String encryptionPolicy = bucketName.substring(0, 3);
         this.amazonS3Manager.deleteObjectInBucket(this.bucketName, file);
     }
 
@@ -66,7 +61,6 @@ public class BucketManager implements Serializable {
      * @return                  returns true/false whether or not the bucket exists.
      */
     public boolean doesBucketExist(){
-        String encryptionPolicy = bucketName.substring(0, 3);
         return amazonS3Manager.bucketExist(bucketName);
     }
 
@@ -76,7 +70,6 @@ public class BucketManager implements Serializable {
      * @param file              file that gets placed into a particular bucket.
      */
     public void fillBucket(File file) {
-        String encryptionPolicy = bucketName.substring(0, 3);
         this.amazonS3Manager.putObjectInBucket(this.bucketName, file);
     }
 
@@ -86,9 +79,8 @@ public class BucketManager implements Serializable {
      * @param file              name of the file that will be used to obtain the S3Object
      * @return                  returns the S3Object instance of the param filename.
      */
-    public S3Object spillBucket(String file){
-        String encryptionPolicy = bucketName.substring(0, 3);
-        return this.amazonS3Manager.getObjectInBucket(this.bucketName, file);
+    public S3Object spillBucket(String currentFolder, String file){
+        return this.amazonS3Manager.getObjectInBucket(this.bucketName + currentFolder, file);
     }
 
     /** Method that lists the objects in a particular bucket.
@@ -97,12 +89,10 @@ public class BucketManager implements Serializable {
      * @return                  returns all of the objects from the bucket name param.
      */
     public ArrayList<String> listObjectsInBucket(String bucketName){
-        String encryptionPolicy = bucketName.substring(0, 3);
         return this.amazonS3Manager.listObjectsInBucket(bucketName);
     }
 
     public ArrayList<String> listObjectsInBucketWithDelim(String bucketName, String delim){
-        String encryptionPolicy = bucketName.substring(0, 3);
         return this.amazonS3Manager.listObjectsInBucketWithDelim(bucketName, delim);
     }
 
