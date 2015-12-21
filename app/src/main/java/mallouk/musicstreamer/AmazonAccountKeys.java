@@ -8,8 +8,7 @@ public class AmazonAccountKeys {
     //Defined instance variables
     private static String publicKey = "";
     private static String privateKey = "";
-
-    private static String keyFile = "/.keys";
+    private static String appFolder = "/MusicStreamer";
 
     /** Constructor that defines initial properties
      *
@@ -32,12 +31,11 @@ public class AmazonAccountKeys {
         return privateKey;
     }
 
-    /** Method that returns the hardcoded key file to access the accounts
-     *  of the users on the device.
+    /** Method that returns the hardcoded app folder name on the device
      *
-     * @return                      returns the key file name.
+     * @return                      returns the app folder name.
      */
-    public static String getKeyFileName(){
-        return keyFile;
+    public static String getAppFolder(){
+        return appFolder;
     }
 }

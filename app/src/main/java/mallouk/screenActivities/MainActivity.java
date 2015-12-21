@@ -2,12 +2,16 @@ package mallouk.screenActivities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.File;
+
+import mallouk.musicstreamer.AmazonAccountKeys;
 import mallouk.musicstreamer.BucketManager;
 import mallouk.musicstreamer.R;
 
@@ -27,6 +31,14 @@ public class MainActivity extends ActionBarActivity {
         playMusic.setOnClickListener(new Button.OnClickListener(){
             public void onClick(View v){
                 BucketManager bucket = new BucketManager("musictestapp");
+
+                File folder = new File(Environment.getExternalStorageDirectory() +
+                        AmazonAccountKeys.getAppFolder());
+                boolean folderExists = true;
+                if (!folder.exists()) {
+                    folderExists = folder.mkdir();
+                }
+
                 Intent i = new Intent();
                 i.putExtra("BucketName", bucket.getBucketName());
 
