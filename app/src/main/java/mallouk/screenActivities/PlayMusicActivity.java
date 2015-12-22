@@ -52,6 +52,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     private TextView currentDirectoryView = null;
     private TextView mode = null;
     private TextView songTime = null;
+    private TextView pullData = null;
     private SeekBar seekBarProgress;
     private MediaPlayer player;
     private int numItemsInBucket = 0;
@@ -85,6 +86,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         downloadButton.setImageResource(R.drawable.download_icon);
         mode = (TextView)findViewById(R.id.mode);
         songTime = (TextView)findViewById(R.id.songTime);
+        pullData = (TextView)findViewById(R.id.pullData);
 
         repeatButton = (ImageButton)findViewById(R.id.repeatButton);
         repeatButton.setImageResource(R.drawable.offrepeat_icon);
@@ -244,9 +246,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         if (fileName.contains("../")){
             String[] parse = currentDirectoryView.getText().toString().trim().split("/");
             String newDir = "";
-            for (int i = 0; i < parse.length-1; i++){
+            for (int i = 1; i < parse.length-1; i++){
                 newDir+=parse[i] + "/";
             }
+            originFile = newDir;
             currentDirectoryView.setText("  " + newDir);
         }else {
             if (currentDirectoryView.getText().toString().trim().equals("/")) {
@@ -290,9 +293,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             currentDirectoryView.setText("  /" + originFile);
             String delim = curDirectory.substring(1, curDirectory.length());
             //Toast.makeText(getApplicationContext(), url + " " + delim, Toast.LENGTH_LONG).show();
-           new SpillBucketTask(globalBucketName, delim).execute();
+            new SpillBucketTask(globalBucketName, delim).execute();
         }
     }
+
 
     @Override
     public void onBufferingUpdate(MediaPlayer mp, int percent) {
@@ -389,6 +393,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
                     selectedIndex = position;
                 } else {
                     selectedIndex = -1;
+                    pullData.setVisibility(View.VISIBLE);
                 }
                 processMusic();
 
@@ -684,6 +689,7 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             numItemsInBucket = filesInBucket.size();
             itemToggle = new boolean[formatedFilesInBucket.size()];
             Arrays.fill(itemToggle, false);
+            pullData.setVisibility(View.INVISIBLE);
         }
     }
 }
