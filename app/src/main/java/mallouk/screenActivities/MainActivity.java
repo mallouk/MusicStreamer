@@ -1,6 +1,9 @@
 package mallouk.screenActivities;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
@@ -8,6 +11,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.io.File;
 
@@ -28,27 +32,39 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void runButtonListeners(){
-        playMusic.setOnClickListener(new Button.OnClickListener(){
-            public void onClick(View v){
-                BucketManager bucket = new BucketManager("musictestapp");
+        playMusic.setOnClickListener(new Button.OnClickListener() {
+            public void onClick(View v) {
+                if (isNetworkAvailable()) {
+                    BucketManager bucket = new BucketManager("musictestapp");
 
-                File folder = new File(Environment.getExternalStorageDirectory() +
-                        AmazonAccountKeys.getAppFolder());
-                boolean folderExists = true;
-                if (!folder.exists()) {
-                    folderExists = folder.mkdir();
+                    File folder = new File(Environment.getExternalStorageDirectory() +
+                            AmazonAccountKeys.getAppFolder());
+                    boolean folderExists = true;
+                    if (!folder.exists()) {
+                        folderExists = folder.mkdir();
+                    }
+
+                    Intent i = new Intent();
+                    i.putExtra("BucketName", bucket.getBucketName());
+
+                    i.setClass(MainActivity.this, PlayMusicActivity.class);
+                    //Launch the next activity.
+                    startActivity(i);
+                }else{
+                    Toast.makeText(getApplicationContext(), "Your Wifi or 3G/4G data doesn't seem to be active. You can't run this " +
+                                    "streaming music function without access to the internet.",
+                            Toast.LENGTH_LONG).show();
                 }
-
-                Intent i = new Intent();
-                i.putExtra("BucketName", bucket.getBucketName());
-
-                i.setClass(MainActivity.this, PlayMusicActivity.class);
-                //Launch the next activity.
-                startActivity(i);
             }
         });
     }
 
+    public boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

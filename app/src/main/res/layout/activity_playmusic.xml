@@ -109,16 +109,17 @@
         android:layout_below="@+id/backButton"
         android:layout_centerHorizontal="true"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Pulling in data..."
-        android:id="@+id/pullData"
-        android:textColor="#ffffff"
-        android:layout_alignTop="@+id/musicView"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="38dp" />
+    <RelativeLayout
+        android:id="@+id/loadingPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center" >
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true" />
+    </RelativeLayout>
 
 
 </RelativeLayout>
