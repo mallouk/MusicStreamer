@@ -22,17 +22,21 @@ import mallouk.musicstreamer.R;
 
 public class MainActivity extends ActionBarActivity {
 
-    private Button playMusic = null;
+    private Button streamMusic = null;
+    private Button playLocal = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        playMusic = (Button)findViewById(R.id.playMusic);
+        streamMusic = (Button)findViewById(R.id.streamMusic);
+        playLocal = (Button)findViewById(R.id.playLocalMusic);
+
         runButtonListeners();
     }
 
     public void runButtonListeners(){
-        playMusic.setOnClickListener(new Button.OnClickListener() {
+        streamMusic.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 if (isNetworkAvailable()) {
                     BucketManager bucket = new BucketManager("musictestapp");
@@ -57,6 +61,36 @@ public class MainActivity extends ActionBarActivity {
                 }
             }
         });
+
+        playLocal.setOnClickListener(new Button.OnClickListener() {
+            public void onClick(View v) {
+                BucketManager bucket = new BucketManager("musictestapp");
+
+                File folder = new File(Environment.getExternalStorageDirectory() +
+                        AmazonAccountKeys.getAppFolder());
+                boolean folderExists = true;
+                if (!folder.exists()) {
+                    folderExists = folder.mkdir();
+                }
+
+                String path = Environment.getExternalStorageDirectory() +
+                        AmazonAccountKeys.getAppFolder();
+                File f = new File(path);
+                File[] files = f.listFiles();
+
+                if (files.length != 0) {
+                    Intent i = new Intent();
+                    i.putExtra("BucketName", bucket.getBucketName());
+
+                    i.setClass(MainActivity.this, PlayLocalMusicActivity.class);
+                    //Launch the next activity.
+                    startActivity(i);
+                }else{
+                    Toast.makeText(getApplicationContext(), "You have no local music to play.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
     }
 
     public boolean isNetworkAvailable() {

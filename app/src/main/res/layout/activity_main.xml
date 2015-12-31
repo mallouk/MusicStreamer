@@ -8,9 +8,18 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Play Music"
-        android:id="@+id/playMusic"
+        android:text="Stream Music"
+        android:id="@+id/streamMusic"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="48dp" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Play Local Music"
+        android:id="@+id/playLocalMusic"
+        android:layout_below="@+id/streamMusic"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="39dp" />
 
 </RelativeLayout>

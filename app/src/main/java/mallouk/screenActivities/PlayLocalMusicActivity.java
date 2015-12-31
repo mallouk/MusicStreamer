@@ -3,7 +3,6 @@ package mallouk.screenActivities;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -25,31 +24,23 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.amazonaws.services.s3.model.S3Object;
-
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import mallouk.musicstreamer.AmazonAccountKeys;
-import mallouk.musicstreamer.BucketManager;
 import mallouk.musicstreamer.R;
 
-public class PlayMusicActivity extends Activity implements View.OnTouchListener, MediaPlayer.OnCompletionListener,
+public class PlayLocalMusicActivity extends Activity implements View.OnTouchListener, MediaPlayer.OnCompletionListener,
         MediaPlayer.OnBufferingUpdateListener, AdapterView.OnItemClickListener,
         View.OnClickListener {
 
     private ListView playMusicView = null;
-    private BucketManager bucketManager = null;
     private String playPause = "Play";
     private ImageButton repeatButton = null;
     private ImageButton playPauseButton = null;
-    private ImageButton downloadButton = null;
 
     private TextView currentDirectoryView = null;
     private TextView mode = null;
@@ -62,7 +53,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     final int[] currPos = new int[1];
     final AdapterView<?>[] view = new AdapterView<?>[1];
     private boolean repeatOn = false;
-    private String globalBucketName;
     private int selectedIndex = -1;
     private int prevViewIndex = -1;
 
@@ -72,20 +62,19 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     private int downloadLevel = 1;
     private boolean[] itemToggle;
     private ProgressDialog downloadProgress = null;
+    private String root = Environment.getExternalStorageDirectory() + AmazonAccountKeys.getAppFolder();
 
+    private String globalBucketName = "";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_playmusic);
+        setContentView(R.layout.activity_localmusic);
         playMusicView = (ListView)findViewById(R.id.musicView);
-        String bucketName = (String)getIntent().getSerializableExtra("BucketName");
-        globalBucketName = bucketName;
-        bucketManager = new BucketManager(bucketName);
         playPauseButton = (ImageButton)findViewById(R.id.playImageButton);
         playPauseButton.setImageResource(R.drawable.play_icon);
-        downloadButton = (ImageButton)findViewById(R.id.downloadButton);
-        downloadButton.setImageResource(R.drawable.download_icon);
+
         mode = (TextView)findViewById(R.id.mode);
+        mode.setText("Local Music Mode");
         songTime = (TextView)findViewById(R.id.songTime);
         loadingPanel = (RelativeLayout)findViewById(R.id.loadingPanel);
 
@@ -105,9 +94,15 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
         forwardButton.setOnClickListener(this);
         backButton.setOnClickListener(this);
         playPauseButton.setOnClickListener(this);
-        downloadButton.setOnClickListener(this);
 
-        new SpillBucketTask(bucketName, "").execute();
+        String path = Environment.getExternalStorageDirectory() +
+                AmazonAccountKeys.getAppFolder();
+        File f = new File(path);
+        File[] files = f.listFiles();
+        String[] token = files[0].toString().split("/");
+        Toast.makeText(getApplicationContext(), token[token.length-1], Toast.LENGTH_SHORT).show();
+
+        new SpillBucketTask("").execute();
         playMusicView.setOnItemClickListener(this);
 
         seekBarProgress = (SeekBar)findViewById(R.id.seekBar);
@@ -199,30 +194,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             } else {
                 repeatButton.setImageResource(R.drawable.offrepeat_icon);
             }
-        }else if(v.getId() == R.id.downloadButton) {
-            mode.setText("Download Mode");
-            if (downloadLevel == 1){
-                downloadActive = true;
-                ListAdapter list = new CustomPlayView(getApplicationContext(), formatedFilesInBucket);
-                playMusicView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-                playMusicView.setAdapter(list);
-
-                selectedDownloadedSong = new ArrayList<String>();
-                downloadLevel = 2;
-            }else{
-                downloadProgress = new ProgressDialog(PlayMusicActivity.this);
-                ProgressDialog progressDialog = new ProgressDialog(PlayMusicActivity.this);
-
-                for (int i = 0; i < selectedDownloadedSong.size(); i++){
-                    String currentFolder = currentDirectoryView.getText().toString().trim();
-                    currentFolder = currentFolder.substring(0, currentFolder.length() - 1);
-
-                    DownloadFile downloadFile = new DownloadFile(i, selectedDownloadedSong, getApplicationContext(),
-                            progressDialog, bucketManager, currentFolder);
-
-                    downloadFile.execute();
-                }
-            }
         }
     }
 
@@ -287,10 +258,12 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             } else {
                 String currDir = currentDirectoryView.getText().toString().trim();
                 String dir = currDir.substring(1, currDir.length());
-                originFile = dir + fileName + "";
+                originFile = dir + "/" + fileName;
             }
         }
-        String url = bucketManager.getFileURL(originFile) + "";
+
+        String url = root + "/" + originFile;
+        Toast.makeText(getApplicationContext(), url, Toast.LENGTH_SHORT).show();
 
         if (url.endsWith("mp3")){
             songDone = false;
@@ -318,12 +291,8 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
             primarySeekBarProgressUpdater();
         }else{
             playMusicView.setAdapter(null);
-            String[] directories = url.split(globalBucketName + ".s3.amazonaws.com");
-            String curDirectory = directories[1];
-            curDirectory = curDirectory.replace("%20", " ");
             currentDirectoryView.setText("  /" + originFile);
-            String delim = curDirectory.substring(1, curDirectory.length());
-            new SpillBucketTask(globalBucketName, delim).execute();
+            new SpillBucketTask(currentDirectoryView.getText().toString().trim()).execute();
         }
     }
 
@@ -472,142 +441,6 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
     }
 
 
-
-    class DownloadFile extends AsyncTask<String, Integer, Void> {
-        //Define instance variables
-        private int i;
-        private ArrayList<String> checkedItems;
-        private Context appContext;
-        private ProgressDialog downloadProgress;
-        private BucketManager bucketManager;
-        private String currentFolder;
-        private String intermDir;
-        /** Constructor defined to update the index of the loop we're on (depending on which
-         * file download we're on).
-         *
-         * @param index
-         */
-        public DownloadFile(int index, ArrayList<String> checkedItems, Context context, ProgressDialog downloadProgress,
-                            BucketManager bucketManager, String currentFolder){
-            i = index;
-            this.checkedItems = checkedItems;
-            appContext = context;
-            this.downloadProgress = downloadProgress;
-            this.bucketManager = bucketManager;
-            this.currentFolder = currentFolder;
-
-            intermDir = currentDirectoryView.getText().toString().trim();
-        }
-
-        /** Settings set before the download takes places, this sets up the properties for the
-         *  download and the download updater.
-         *
-         */
-        public void onPreExecute() {
-            downloadProgress.setIndeterminate(true);
-            downloadProgress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            downloadProgress.setCancelable(false);
-            downloadProgress.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.cancel();
-                }
-            });
-
-            downloadProgress.setButton(DialogInterface.BUTTON_POSITIVE, "Okay!", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    downloadActive = false;
-                    selectedDownloadedSong = new ArrayList<String>();
-                    mode.setText("Music Mode");
-                    downloadLevel = 1;
-
-                    ListAdapter list = new CustomPlayView(appContext, formatedFilesInBucket);
-                    playMusicView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-                    playMusicView.setAdapter(list);
-
-                    dialog.dismiss();
-                }
-            });
-
-            downloadProgress.setMessage("Downloading... (" + (i + 1) + "/" + checkedItems.size() + ")");
-            downloadProgress.show();
-        }
-
-        /** Progress bar method that gets updated on each run.
-         *
-         * @param progress
-         */
-        public void onProgressUpdate(Integer... progress) {
-            downloadProgress.setMessage("Downloading... (" + (i +1) + "/" + checkedItems.size() + ")");
-            downloadProgress.setIndeterminate(false);
-            downloadProgress.setMax(100);
-            downloadProgress.setProgress(progress[0]);
-        }
-
-        /** Method to download the file.
-         *
-         * @param strings
-         * @return
-         */
-        public Void doInBackground(String... strings) {
-            if (checkedItems.size() != 0) {
-                try {
-                    String file = checkedItems.get(i);
-
-                    S3Object downloadedFile = bucketManager.spillBucket(currentFolder, file);
-                    String downloadedFileName = file;
-                    if (!intermDir.equals("/")){
-                        String sub = intermDir.substring(1, intermDir.length());
-                        String dirs = "/";
-                        String[] tokens = sub.split("/");
-                        for (int i = 0; i < tokens.length; i++) {
-                            dirs+=tokens[i];
-                            File folder = new File(Environment.getExternalStorageDirectory() +
-                                    AmazonAccountKeys.getAppFolder() + dirs);
-                            boolean folderExists = true;
-                            if (!folder.exists()) {
-                                folderExists = folder.mkdir();
-                            }
-                            dirs+="/";
-                        }
-                    }
-
-                    String downloadedFilePath = Environment.getExternalStorageDirectory() +
-                            AmazonAccountKeys.getAppFolder() + intermDir + downloadedFileName;
-
-                    FileOutputStream downloadedFileStream = new FileOutputStream(downloadedFilePath);;
-                    InputStream fileContentStream = downloadedFile.getObjectContent();;
-
-                    //How much of file has been downloaded up to this point.
-                    int receivedBytes = 0;
-                    //The size of the file
-                    long fileSize = downloadedFile.getObjectMetadata().getContentLength();
-                    int chunkSize;
-                    byte[] downloadBuffer = new byte[1024];
-                    while ((chunkSize = fileContentStream.read(downloadBuffer)) > 0) {
-                        downloadedFileStream.write(downloadBuffer, 0, chunkSize);
-                        //More of the file has been downloaded so update the progressbar
-                        receivedBytes += chunkSize;
-                        //Convert to percent of file downloaded
-                        publishProgress((int) (receivedBytes * 100 / fileSize));
-                    }
-                    downloadedFileStream.close();
-                    fileContentStream.close();
-
-                } catch (Exception e) {}
-            }else{
-                Toast.makeText(appContext, "No files selected.", Toast.LENGTH_LONG).show();
-            }
-            return null;
-        }
-
-        public void onPostExecute(ArrayList<String> filesInBucket) {
-
-        }
-    }
-
-
     class CustomPlayView extends ArrayAdapter<String> {
         public CustomPlayView(Context context, ArrayList<String> songNames){
             super(context, R.layout.custom_row, songNames);
@@ -685,12 +518,10 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
      */
     public class SpillBucketTask extends AsyncTask<Void, Void, ArrayList<String>> {
         //Define instance variables
-        private String bucketName;
-        private String delim;
+        private String subDir;
 
-        public SpillBucketTask(String bucketName, String delim){
-            this.bucketName = bucketName;
-            this.delim = delim;
+        public SpillBucketTask(String subDir){
+            this.subDir = subDir;
         }
 
         /** Method that runs when this task is executed. It lists the takes the objects of the
@@ -701,16 +532,16 @@ public class PlayMusicActivity extends Activity implements View.OnTouchListener,
          *                                      screen.
          */
         public ArrayList<String> doInBackground(Void... voids) {
-            ArrayList<String> filesInBucket = null;
-            try {
-                if (delim.equals("")) {
-                    filesInBucket = bucketManager.listObjectsInBucket(bucketName);
-                }else{
-                    filesInBucket = bucketManager.listObjectsInBucketWithDelim(bucketName, delim);
-                }
-            } catch (Exception e) {
-                //Do nothing...
+            ArrayList<String> filesInBucket = new ArrayList<String>();
+
+            String path = root + subDir;
+            File f = new File(path);
+            File[] files = f.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                String[] token = files[i].toString().split("/");
+                filesInBucket.add(token[token.length - 1]);
             }
+
             return filesInBucket;
         }
 
