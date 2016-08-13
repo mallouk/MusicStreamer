@@ -24,4 +24,5 @@ dependencies {
     compile 'com.android.support:appcompat-v7:22.1.0'
     compile files('libs/aws-android-sdk-2.1.8-s3.debug.jar')
     compile files('libs/aws-android-sdk-2.1.8-core.debug.jar')
+    compile 'com.google.android.gms:play-services-appindexing:8.1.0'
 }

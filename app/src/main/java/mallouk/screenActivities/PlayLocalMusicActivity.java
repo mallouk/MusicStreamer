@@ -24,6 +24,7 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +86,7 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
         ImageButton forwardButton = (ImageButton)findViewById(R.id.forwardButton);
         forwardButton.setImageResource(R.drawable.forward_icon);
 
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         currentDirectoryView = (TextView)findViewById(R.id.songName);
         currentDirectoryView.setText("  /");
         currPos[0] = -1;
@@ -100,7 +102,6 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
         File f = new File(path);
         File[] files = f.listFiles();
         String[] token = files[0].toString().split("/");
-        Toast.makeText(getApplicationContext(), token[token.length-1], Toast.LENGTH_SHORT).show();
 
         new SpillBucketTask("").execute();
         playMusicView.setOnItemClickListener(this);
@@ -113,7 +114,25 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
         player.setOnBufferingUpdateListener(this);
     }
 
-
+//    public boolean onKeyDown(int keyCode, KeyEvent event) {
+//        if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)){
+//            //Toast.makeText(getApplicationContext(), "Vol Decreased.", Toast.LENGTH_LONG).show();
+//            if (audioManager != null){
+//                int currVol = audioManager.getStreamVolume(audioManager.STREAM_MUSIC);
+//                currVol-=2;
+//                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currVol, 0);
+//            }
+//        }else if ((keyCode == KeyEvent.KEYCODE_VOLUME_UP)){
+//            //Toast.makeText(getApplicationContext(), "Vol Increased.", Toast.LENGTH_LONG).show();
+//            if (audioManager != null){
+//                int currVol = audioManager.getStreamVolume(audioManager.STREAM_MUSIC);
+//                currVol+=2;
+//                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currVol, 0);
+//            }
+//        }
+//            return true;
+//    }
+	
     @Override
     public void onClick(View v) {
         if(v.getId() == R.id.playImageButton) {
@@ -142,8 +161,13 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
                 Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
             }else{
                 player.release();
-                if (currPos[0] == (numItemsInBucket - 1)) {
+                if (currPos[0] == (numItemsInBucket)) {
                     currPos[0] = 0;
+                    String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
+                    while (!fileName.endsWith("mp3")){
+                        currPos[0]++;
+                        fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
+                    }
                 } else {
                     currPos[0]++;
                 }
@@ -165,11 +189,13 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
                 Toast.makeText(getApplicationContext(), "You must have a song selected to switch from.", Toast.LENGTH_LONG).show();
             }else{
                 player.release();
-
-                if (currPos[0] == 0) {
-                    currPos[0] = (numItemsInBucket - 1);
-                } else {
-                    currPos[0]--;
+                if (currPos[0] > 0){
+                    String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0] - 1));
+                    if (!fileName.endsWith("mp3")){
+                        currPos[0] = numItemsInBucket;
+                    }else{
+                        currPos[0]--;
+                    }
                 }
                 getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
                 getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
@@ -239,10 +265,23 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
         }
     }
 
+    private AudioManager audioManager = null;
+    AudioManager.OnAudioFocusChangeListener audioListener = new AudioManager.OnAudioFocusChangeListener(){
+        @Override
+        public void onAudioFocusChange(int focusChange) {
+            int currVol = audioManager.getStreamVolume(audioManager.STREAM_MUSIC);
+            if (focusChange == audioManager.AUDIOFOCUS_GAIN) {
+                player.start();
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currVol, 0);
+            }else{
+                player.pause();
+            }
+        }
+    };
 
-    public void processMusic() throws Exception{
+       public void processMusic() throws Exception{
         String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
-
+		
         String originFile = "";
         if (fileName.contains("../")){
             String[] parse = currentDirectoryView.getText().toString().trim().split("/");
@@ -263,32 +302,42 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
         }
 
         String url = root + "/" + originFile;
-        Toast.makeText(getApplicationContext(), url, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(), url, Toast.LENGTH_SHORT).show();
 
         if (url.endsWith("mp3")){
             songDone = false;
-            player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            player.setDataSource(url);
-            playPause = "Pause";
-            playPauseButton.setImageResource(R.drawable.pause_icon);
-            player.setOnCompletionListener(this);
-            Runnable r = new Runnable() {
-                public void run(){
-                    try{
-                        player.prepare();
-                    }catch (Exception e) {
-                        //Do Nothing
+            //audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            int reqAudioChannel = audioManager.requestAudioFocus(audioListener,
+                    audioManager.STREAM_MUSIC, audioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK);
+			//Toast.makeText(getApplicationContext(), audioManager.getStreamVolume(audioManager.STREAM_MUSIC) + " GEt VOL1", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(), audioManager.getStreamVolume(audioManager.STREAM_NOTIFICATION) + " GEt VOL2", Toast.LENGTH_SHORT).show();
+
+
+            if (reqAudioChannel == audioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                player.setDataSource(url);
+                playPause = "Pause";
+                playPauseButton.setImageResource(R.drawable.pause_icon);
+                player.setOnCompletionListener(this);
+                Runnable r = new Runnable() {
+                    public void run() {
+                        try {
+                            player.prepare();
+                        } catch (Exception e) {
+                            //Do Nothing
+                        }
                     }
+                };
+
+                ExecutorService executeT1 = Executors.newFixedThreadPool(1);
+                executeT1.execute(r);
+                executeT1.shutdownNow();
+                while (!executeT1.isTerminated()) {
                 }
-            };
+                player.start();
 
-            ExecutorService executeT1 = Executors.newFixedThreadPool(1);
-            executeT1.execute(r);
-            executeT1.shutdownNow();
-            while (!executeT1.isTerminated()){}
-            player.start();
-
-            primarySeekBarProgressUpdater();
+                primarySeekBarProgressUpdater();
+            }
         }else{
             playMusicView.setAdapter(null);
             currentDirectoryView.setText("  /" + originFile);
@@ -305,61 +354,30 @@ public class PlayLocalMusicActivity extends Activity implements View.OnTouchList
     @Override
     public void onCompletion(MediaPlayer mp) {
         player.release();
-        if (repeatOn){
-            if (currPos[0] == (numItemsInBucket - 1)) {
-                for (int i = 0; i < formatedFilesInBucket.size(); i++){
-                    if (formatedFilesInBucket.get(i).toString().contains("mp3")){
-                        currPos[0] = i;
-                        break;
-                    }
-                }
-
-                //currPos[0] = 4;
-            } else {
+        if (currPos[0] == (numItemsInBucket)) {
+            currPos[0] = 0;
+            String fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
+            while (!fileName.endsWith("mp3")){
                 currPos[0]++;
+                fileName = String.valueOf(view[0].getItemAtPosition(currPos[0]));
             }
-            getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
-            getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
-            selectedIndex=currPos[0];
-
-            player = new MediaPlayer();
-            player.setOnBufferingUpdateListener(this);
-            try {
-                processMusic();
-            }catch(Exception e){
-                e.printStackTrace();
-            }
-            playMusicView.setItemChecked(currPos[0], true);
-        }else if (!repeatOn){ //Repeat off
-            if (currPos[0] == (numItemsInBucket - 1)) {
-                playPauseButton.setImageResource(R.drawable.play_icon);
-                player = new MediaPlayer();
-                player.setOnBufferingUpdateListener(this);
-
-                playMusicView.clearChoices();
-                playMusicView.requestLayout();
-                playPause = "Play";
-                currPos[0] = -1;
-
-                getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
-            } else {
-                currPos[0]++;
-                getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
-                getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
-                selectedIndex=currPos[0];
-
-                player = new MediaPlayer();
-                player.setOnBufferingUpdateListener(this);
-                try {
-                    processMusic();
-                }catch(Exception e){
-                    e.printStackTrace();
-                }
-                playMusicView.setItemChecked(currPos[0], true);
-            }
-
+        } else {
+            currPos[0]++;
         }
-    }
+        getViewByPosition(selectedIndex, playMusicView).setBackgroundColor(Color.BLACK);
+        getViewByPosition(currPos[0], playMusicView).setBackgroundColor(Color.GRAY);
+        selectedIndex=currPos[0];
+
+        player = new MediaPlayer();
+        player.setOnBufferingUpdateListener(this);
+        try {
+            processMusic();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        playMusicView.setItemChecked(currPos[0], true);
+
+}
 
     public View getViewByPosition(int pos, ListView listView) {
         final int firstListItemPosition = listView.getFirstVisiblePosition();

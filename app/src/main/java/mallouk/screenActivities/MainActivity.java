@@ -25,17 +25,18 @@ public class MainActivity extends ActionBarActivity {
     private Button streamMusic = null;
     private Button playLocal = null;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        streamMusic = (Button)findViewById(R.id.streamMusic);
-        playLocal = (Button)findViewById(R.id.playLocalMusic);
+        streamMusic = (Button) findViewById(R.id.streamMusic);
+        playLocal = (Button) findViewById(R.id.playLocalMusic);
 
         runButtonListeners();
     }
 
-    public void runButtonListeners(){
+    public void runButtonListeners() {
         streamMusic.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 if (isNetworkAvailable()) {
@@ -54,7 +55,7 @@ public class MainActivity extends ActionBarActivity {
                     i.setClass(MainActivity.this, PlayMusicActivity.class);
                     //Launch the next activity.
                     startActivity(i);
-                }else{
+                } else {
                     Toast.makeText(getApplicationContext(), "Your Wifi or 3G/4G data doesn't seem to be active. You can't run this " +
                                     "streaming music function without access to the internet.",
                             Toast.LENGTH_LONG).show();
@@ -85,7 +86,7 @@ public class MainActivity extends ActionBarActivity {
                     i.setClass(MainActivity.this, PlayLocalMusicActivity.class);
                     //Launch the next activity.
                     startActivity(i);
-                }else{
+                } else {
                     Toast.makeText(getApplicationContext(), "You have no local music to play.", Toast.LENGTH_LONG).show();
                 }
             }
